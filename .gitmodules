@@ -1,0 +1,3 @@
+[submodule "tridot"]
+	path = tridot
+	url = https://github.com/JulianHinxlage/tridot
