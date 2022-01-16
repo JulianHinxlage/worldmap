@@ -20,7 +20,7 @@ namespace tri {
                 Clock clock;
                 MapGenerator generator;
                 std::string file = env->assets->searchFile("worldmap.txt");
-                if (!generator.generate(file, true)) {
+                if (!generator.generate(file, true, false, false)) {
                     env->console->info("faild to load file ", file);
                 }
                 env->console->info("generating world map took ", clock.elapsed(), "s");

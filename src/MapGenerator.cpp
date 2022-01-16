@@ -10,6 +10,7 @@
 #include "engine/Transform.h"
 #include "engine/MeshComponent.h"
 #include "engine/AssetManager.h"
+#include "MapRenderer.h"
 
 using namespace tri;
 
@@ -38,7 +39,16 @@ bool pointInTriangle(glm::vec2 p, glm::vec2 v1, glm::vec2 v2, glm::vec2 v3) {
     return !(neg && pos);
 }
 
-void triangulation(std::vector<std::vector<glm::vec2>>& geometry, glm::vec2 center, std::vector<Vertex>& vs, std::vector<int>& is, glm::vec2 uv = { 0, 0 }) {
+glm::vec3 mapToSphere(glm::vec3 p) {
+    float lon = p.x;
+    float lat = p.z;
+    return glm::vec3(
+        glm::sin(glm::radians(lon)) * glm::cos(glm::radians(lat)),
+        -glm::sin(glm::radians(lat)),
+        glm::cos(glm::radians(lon)) * glm::cos(glm::radians(lat)));
+}
+
+void triangulation(std::vector<std::vector<glm::vec2>>& geometry, glm::vec3 center, std::vector<Vertex>& vs, std::vector<int>& is, glm::vec2 uv = { 0, 0 }, bool spherical = false) {
     int index = vs.size();
     for (auto& geom : geometry) {
 
@@ -60,9 +70,20 @@ void triangulation(std::vector<std::vector<glm::vec2>>& geometry, glm::vec2 cent
                     }
                 }
                 if (!hit) {
-                    vs.push_back({ glm::vec3(polygon[i + 0].x - center.x, 0, -polygon[i + 0].y + center.y), glm::vec3(0, 1, 0), uv });
-                    vs.push_back({ glm::vec3(polygon[i + 2].x - center.x, 0, -polygon[i + 2].y + center.y), glm::vec3(0, 1, 0), uv });
-                    vs.push_back({ glm::vec3(polygon[i + 1].x - center.x, 0, -polygon[i + 1].y + center.y), glm::vec3(0, 1, 0), uv });
+
+                    glm::vec3 v1(polygon[i + 0].x - center.x, -center.z, -polygon[i + 0].y + center.y);
+                    glm::vec3 v2(polygon[i + 2].x - center.x, -center.z, -polygon[i + 2].y + center.y);
+                    glm::vec3 v3(polygon[i + 1].x - center.x, -center.z, -polygon[i + 1].y + center.y);
+
+                    if (spherical) {
+                        v1 = mapToSphere(v1) * 50.0f;
+                        v2 = mapToSphere(v2) * 50.0f;
+                        v3 = mapToSphere(v3) * 50.0f;
+                    }
+
+                    vs.push_back({ v1, glm::vec3(0, 1, 0), uv });
+                    vs.push_back({ v2, glm::vec3(0, 1, 0), uv });
+                    vs.push_back({ v3, glm::vec3(0, 1, 0), uv });
                     is.push_back(index + 0);
                     is.push_back(index + 1);
                     is.push_back(index + 2);
@@ -81,7 +102,7 @@ Ref<Mesh> triangulation(std::vector<std::vector<glm::vec2>>& geometry, glm::vec2
         Ref<Mesh> m = Ref<Mesh>::make();
         std::vector<Vertex> vs;
         std::vector<int> is;
-        triangulation(geometry, center, vs, is);
+        triangulation(geometry, glm::vec3(center, 0), vs, is);
         m->create((float*)vs.data(), vs.size() * sizeof(Vertex) / sizeof(float), is.data(), is.size(), { {tri::FLOAT,3},{tri::FLOAT,3},{tri::FLOAT,2} }, true);
         return m;
     }
@@ -90,7 +111,7 @@ Ref<Mesh> triangulation(std::vector<std::vector<glm::vec2>>& geometry, glm::vec2
     }
 }
 
-bool MapGenerator::generate(const std::string& file, bool singleMesh){
+bool MapGenerator::generate(const std::string& file, bool singleMesh, bool noMeshUpdate, bool spherical){
 	TeretoryGenerator teretoryGenerator;
     int index = 0;
 	if (teretoryGenerator.load(file)) {
@@ -104,31 +125,51 @@ bool MapGenerator::generate(const std::string& file, bool singleMesh){
                 Transform transform;
                 transform.parent = id;
                 transform.position = glm::vec3(t.position.x, 0, -t.position.y);
-                if (t.type == TeretoryGenerator::Teretory::COUNTRY) {
+                if (spherical) {
+                    transform.position = mapToSphere(transform.position) * 50.0f;
+                }
+                if (/*t.type == TeretoryGenerator::Teretory::STATE ||*/ t.type == TeretoryType::COUNTRY) {
                     if (t.geometry.size() > 0) {
-                        triangulation(t.geometry, { 0, 0 }, vs, is, { index, index });
+                        if (!noMeshUpdate) {
+                            triangulation(t.geometry, { 0, 0, t.type == TeretoryType::STATE ? -0.1 : 0 }, vs, is, { index, index }, spherical);
+                        }
+                        TeretoryComponent tc;
+                        tc.teretoryId = index;
+                        tc.type = t.type;
+                        tc.color = Color(glm::vec4(
+                            (float)std::rand() / (float)RAND_MAX, 
+                            (float)std::rand() / (float)RAND_MAX, 
+                            (float)std::rand() / (float)RAND_MAX,
+                            1));
+                        if (t.type == TeretoryType::STATE) {
+                            tc.color.a = 40;
+                        }
+                        tc.parent = t.parent;
                         index++;
+                        return (int)env->scene->addEntity(EntityInfo(t.name), transform, NoHierarchyUpdate(), tc);
                     }
                 }
+
                 return (int)env->scene->addEntity(EntityInfo(t.name), transform, NoHierarchyUpdate());
 		    }, id);
 
             env->console->info("world map mesh: ", vs.size(), " vertices");
 
-            Ref<Mesh> mesh = Ref<Mesh>::make();
-            mesh->create((float*)vs.data(), vs.size() * sizeof(Vertex) / sizeof(float), is.data(), is.size(), { {tri::FLOAT,3},{tri::FLOAT,3},{tri::FLOAT,2} }, true);
-            if (!std::filesystem::exists("map")) {
-                std::filesystem::create_directory("map");
+            Ref<Mesh> mesh;
+            if (!noMeshUpdate) {
+                mesh = Ref<Mesh>::make();
+                mesh->create((float*)vs.data(), vs.size() * sizeof(Vertex) / sizeof(float), is.data(), is.size(), { {tri::FLOAT,3},{tri::FLOAT,3},{tri::FLOAT,2} }, true);
+                if (!std::filesystem::exists("map")) {
+                    std::filesystem::create_directory("map");
+                }
+                mesh->save("map/map.obj");
+                mesh = env->assets->get<Mesh>("map/map.obj");
             }
-            mesh->save("map/map.obj");
-            mesh = env->assets->get<Mesh>("map/map.obj");
+            else {
+                mesh = env->assets->get<Mesh>("map/map.obj");
+            }
 
-            Ref<Material> mat = Ref<Material>::make();
-            mat->shader = env->assets->get<Shader>("map.glsl");
-            mat->save("map/map.mat");
-            mat = env->assets->get<Material>("map/map.mat");
-
-            env->scene->addComponent<MeshComponent>(id, MeshComponent(mesh, mat));
+            env->scene->addComponent<MapComponent>(id, MapComponent(mesh));
 
         }
         else {
@@ -136,7 +177,7 @@ bool MapGenerator::generate(const std::string& file, bool singleMesh){
                 Transform transform;
                 transform.parent = id;
                 transform.position = glm::vec3(t.position.x, 0, -t.position.y);
-                if (t.type == TeretoryGenerator::Teretory::COUNTRY) {
+                if (t.type == TeretoryType::COUNTRY) {
                     if (t.geometry.size() > 0) {
                         Ref<Mesh> mesh = triangulation(t.geometry, t.position);
                         if (!std::filesystem::exists("map")) {

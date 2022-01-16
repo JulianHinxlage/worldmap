@@ -29,13 +29,13 @@ bool TeretoryGenerator::load(const std::string& file) {
                 t.name = name;
                 t.parent = parent;
                 if (type == "country") {
-                    t.type = Teretory::COUNTRY;
+                    t.type = TeretoryType::COUNTRY;
                 }
                 else if (type == "state") {
-                    t.type = Teretory::STATE;
+                    t.type = TeretoryType::STATE;
                 }
                 else if (type == "city") {
-                    t.type = Teretory::CITY;
+                    t.type = TeretoryType::CITY;
                 }
 
                 t.position = { 0, 0 };
@@ -91,7 +91,7 @@ bool TeretoryGenerator::load(const std::string& file) {
                 }
 
                 //add to list
-                if (t.type == Teretory::COUNTRY) {
+                if (t.type == TeretoryType::COUNTRY) {
                     bool added = false;
                     for (int i = 0; i < teretory.size(); i++) {
                         if (teretory[i].name == t.parent) {
@@ -103,7 +103,7 @@ bool TeretoryGenerator::load(const std::string& file) {
                     }
                     if (!added) {
                         Teretory tmp;
-                        tmp.type = Teretory::CONTINENT;
+                        tmp.type = TeretoryType::CONTINENT;
                         tmp.name = t.parent;
                         tmp.children.push_back(t);
                         tmp.position = { 0, 0 };
@@ -111,7 +111,7 @@ bool TeretoryGenerator::load(const std::string& file) {
                         index = teretory.size() - 1;
                     }
                 }
-                else if (t.type == Teretory::STATE) {
+                else if (t.type == TeretoryType::STATE) {
                     if (index < teretory.size()) {
                         auto& list = teretory[index].children;
                         if (list.size() > 0) {
@@ -119,7 +119,7 @@ bool TeretoryGenerator::load(const std::string& file) {
                         }
                     }
                 }
-                else if (t.type == Teretory::CITY) {
+                else if (t.type == TeretoryType::CITY) {
                     if (index < teretory.size()) {
                         auto& list = teretory[index].children;
                         if (list.size() > 0) {

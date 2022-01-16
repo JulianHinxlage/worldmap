@@ -10,5 +10,5 @@
 
 class MapGenerator {
 public:
-	bool generate(const std::string &file, bool singleMesh = false);
+	bool generate(const std::string &file, bool singleMesh = false, bool noMeshUpdate = false, bool spherical = false);
 };

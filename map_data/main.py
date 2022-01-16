@@ -144,7 +144,7 @@ def test():
                         print("   ", j, "city", name, "(", admin, ")", "in", state)
 
 
-def write(file, type, name, admin, geom, point, center=False):
+def write(file, type, name, admin, geom, point, divisor=1, center=False):
     file.write(type)
     file.write(":")
     file.write(name)
@@ -159,11 +159,14 @@ def write(file, type, name, admin, geom, point, center=False):
     else:
         if not center:
             for polygon in geom:
+                i = 0
                 for vertex in polygon:
-                    file.write(str(vertex[0]))
-                    file.write(",")
-                    file.write(str(vertex[1]))
-                    file.write(";")
+                    if i % divisor == 0 or i == len(polygon) - 1:
+                        file.write(str(vertex[0]))
+                        file.write(",")
+                        file.write(str(vertex[1]))
+                        file.write(";")
+                    i += 1
                 file.write(":")
         else:
             count = 0
@@ -191,14 +194,14 @@ def generate():
         cname = countries_name[index]
         cadmin = countries_admin[index]
         ccontinent = countries_continent[index]
-        write(file, 'country', cname, ccontinent, countries_geometry[index], False)
+        write(file, 'country', cname, ccontinent, countries_geometry[index], False, 1)
         for i in range(len(states_name)):
             sname = states_name[i]
             slocal = states_local_name[i]
             scountry = states_country[i]
             sadmin = states_admin[i]
             if scountry == cname and states_list[i] == 0:
-                write(file, 'state', sname, scountry, states_geometry[i], False)
+                write(file, 'state', sname, scountry, states_geometry[i], False, 10)
                 states_list[i] = 1
                 for j in range(len(cities_name)):
                     name = cities_name[j]

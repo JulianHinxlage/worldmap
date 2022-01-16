@@ -22,5 +22,10 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E touch "tridot/worldmap.dll"
     COMMAND ${CMAKE_COMMAND} -E rename "tridot/worldmap.dll" "tridot/junk-worldmap.dll" 
 )
+add_custom_command(
+    TARGET ${PROJECT_NAME} PRE_LINK
+    COMMAND ${CMAKE_COMMAND} -E touch "tridot/worldmap_RelWithDebugInfo.dll"
+    COMMAND ${CMAKE_COMMAND} -E rename "tridot/worldmap_RelWithDebugInfo.dll" "tridot/junk-worldmap_RelWithDebugInfo.dll" 
+)
 
 add_dependencies(tridot-editor worldmap)

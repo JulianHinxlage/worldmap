@@ -5,21 +5,16 @@
 #pragma once
 
 #include "pch.h"
+#include "MapRenderer.h"
 #include <glm/glm.hpp>
 
 class TeretoryGenerator {
 public:
     class Teretory {
     public:
-        enum Type {
-            CONTINENT,
-            COUNTRY,
-            STATE,
-            CITY,
-        };
         std::string name;
         std::string parent;
-        Type type;
+        TeretoryType type;
         std::vector<Teretory> children;
         glm::vec2 position;
         std::vector<std::vector<glm::vec2>> geometry;
