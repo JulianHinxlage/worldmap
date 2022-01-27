@@ -8,6 +8,7 @@ if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
     set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/tridot)
     set(CMAKE_DEBUG_POSTFIX "")
+    set(CMAKE_RELWITHDEBINFO_POSTFIX "")
     set(USE_MSVC_RUNTIME_LIBRARY_DLL 1)
 endif()
 
@@ -20,12 +21,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC tridot)
 add_custom_command(
     TARGET ${PROJECT_NAME} PRE_LINK
     COMMAND ${CMAKE_COMMAND} -E touch "tridot/worldmap.dll"
-    COMMAND ${CMAKE_COMMAND} -E rename "tridot/worldmap.dll" "tridot/junk-worldmap.dll" 
-)
-add_custom_command(
-    TARGET ${PROJECT_NAME} PRE_LINK
-    COMMAND ${CMAKE_COMMAND} -E touch "tridot/worldmap_RelWithDebugInfo.dll"
-    COMMAND ${CMAKE_COMMAND} -E rename "tridot/worldmap_RelWithDebugInfo.dll" "tridot/junk-worldmap_RelWithDebugInfo.dll" 
+    COMMAND ${CMAKE_COMMAND} -E rename "tridot/worldmap.dll" "tridot/junk-worldmap.dll"
 )
 
 add_dependencies(tridot-editor worldmap)
+add_dependencies(tridot-launcher worldmap)
